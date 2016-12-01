@@ -194,7 +194,7 @@ class WorkspaceBuilder(object):
         if focus:
             focus.select_window()
 
-    def iter_create_windows(self, s):
+    def iter_create_windows(self, s, kill_first=True):
         """Return :class:`Window` iterating through session config dict.
 
         Generator yielding :class:`Window` by iterating through
@@ -203,6 +203,7 @@ class WorkspaceBuilder(object):
         Applies ``window_options`` to window.
 
         :param session: :class:`Session` from the config
+        :param kill_first: Flag to kill preexisting first window
         :rtype: tuple(:class:`Window`, ``wconf``)
 
         """
@@ -213,7 +214,7 @@ class WorkspaceBuilder(object):
                 window_name = wconf['window_name']
 
             w1 = None
-            if i == int(1):  # if first window, use window 1
+            if i == int(1) and kill_first:  # if first window, use window 1
                 w1 = s.attached_window
                 w1.move_window(99)
                 pass
@@ -236,7 +237,7 @@ class WorkspaceBuilder(object):
                 window_shell=ws,
             )
 
-            if i == int(1) and w1:  # if first window, use window 1
+            if i == int(1) and w1 and kill_first:  # if first window, use window 1
                 w1.kill_window()
             assert(isinstance(w, Window))
             s.server._update_windows()
