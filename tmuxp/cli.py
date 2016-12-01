@@ -243,23 +243,42 @@ def load_workspace(
         else:
             session.attach_session()
 
-    session_name = sconfig['session_name']
-    if builder.session_exists(session_name):
-        if not detached and (
-            answer_yes or click.confirm(
-                '%s is already running. Attach?' %
-                click.style(session_name, fg='green'), default=True)
-        ):
-            reattach(builder.session)
-        return
+    if not attached:
+        session_name = sconfig['session_name']
+        session = None
+        if builder.session_exists(session_name):
+            if not detached and (
+                answer_yes or click.confirm(
+                    '%s is already running. Attach?' %
+                    click.style(session_name, fg='green'), default=True)
+            ):
+                reattach(builder.session)
+            return
+    else:
+        try:
+            session_attached = t.cmd('display-message', '-p', '#{session_attached}').stdout[1]
+            if session_attached != '1':
+                raise exc.TmuxpException('No current session attached.')
+
+            session_name = t.cmd('display-message', '-p', '#{session_name}').stdout[1]
+            if not builder.session_exists(session_name):
+                raise exc.TmuxpException('Reported session does not exist.')
+            session = t.find_where({'session_name': session_name})
+        except Exception as e:
+            import traceback
+
+            click.echo('Failed to identify current attached session.', err=True)
+            click.echo(traceback.format_exc(), err=True)
+            click.echo(e, err=True)
+            sys.exit()
 
     try:
         click.echo(
             click.style('[Loading] ', fg='green') +
             click.style(config_file, fg='blue', bold=True))
-        builder.build()
+        builder.build(session)
 
-        if 'TMUX' in os.environ:
+        if 'TMUX' in os.environ and not attached:
             if not detached and (answer_yes or click.confirm(
                 'Already inside TMUX, switch to session?'
             )):
